@@ -22,11 +22,6 @@ namespace GeneralizationsAndLambdaExspressions
             {
                 Value = value;
             }
-
-            public override string ToString()
-            {
-                return Value.ToString();
-            }
         }
 
         public Node Root;
@@ -111,92 +106,56 @@ namespace GeneralizationsAndLambdaExspressions
 
         private class BinaryTreeEnumerator : IEnumerator<T>
         {
-            private List<Node> _nodes = new List<Node>();
-            private int _index;
+            private Stack<Node> stack = new Stack<Node>();
+            private Node current;
 
             public BinaryTreeEnumerator(Node root)
             {
-                PushLeftNodes(root);
+                current = root;
+                PushLeftNodes();
             }
 
-            private void PushLeftNodes(Node node)
+            private void PushLeftNodes()
             {
-                while (node != null)
+                while (current != null)
                 {
-                    _nodes.Add(node);
-                    node = node.Left;
+                    stack.Push(current);
+                    current = current.Left;
                 }
             }
 
-            public T Current => _nodes[--_index].Value;
-
+            public T Current
+            {
+                get
+                {
+                    if (stack.Count == 0)
+                        return default;
+                    return stack.Peek().Value;
+                }
+            }
             object IEnumerator.Current => Current;
 
             public bool MoveNext()
             {
-                if (_index == 0)
-                {
+                if (stack.Count == 0)
                     return false;
-                }
 
-                Node node = _nodes[--_index];
-                PushLeftNodes(node.Right);
+                current = stack.Pop();
+                Node node = current.Right;
+                while (node != null)
+                {
+                    stack.Push(node);
+                    node = node.Left;
+                }
                 return true;
             }
 
-            public bool MovePrevious()
+            public void Reset()
             {
-                if (_index == _nodes.Count)
-                {
-                    return false;
-                }
-
-                Node node = _nodes[++_index];
-                PushLeftNodes(node.Left);
-                return true;
-            }
-
-            public static BinaryTreeEnumerator operator ++(BinaryTreeEnumerator enumerator)
-            {
-                enumerator.MoveNext();
-                return enumerator;
-            }
-
-            public static BinaryTreeEnumerator operator --(BinaryTreeEnumerator enumerator)
-            {
-                enumerator.MovePrevious();
-                return enumerator;
+                throw new NotImplementedException();
             }
 
             public void Dispose() { }
-
-            public void Reset() { }
-        }
-
-        private void PrintTree(Node startNode, string indent = "", Side? side = null)
-        {
-            if (startNode != null)
-            {
-                string nodeSide;
-                switch (side)
-                {
-                    case null:
-                        nodeSide = "+";
-                        break;
-                    case Side.Left:
-                        nodeSide = "L";
-                        break;
-                    default:
-                        nodeSide = "R";
-                        break;
-                }
-
-                Console.WriteLine($"{indent} [{nodeSide}] - {startNode.Value}");
-                indent += "   ";
-                // Рекурсивный вызов для левой и правой ветвей
-                PrintTree(startNode.Left, indent, Side.Left);
-                PrintTree(startNode.Right, indent, Side.Right);
-            }
         }
     }
 
@@ -206,22 +165,49 @@ namespace GeneralizationsAndLambdaExspressions
         {
             var tree = new BinaryTree<int>();
 
-            tree.Add(5);
-            tree.Add(3);
+            tree.Add(75);
+            tree.Add(57);
+            tree.Add(90);
+            tree.Add(32);
             tree.Add(7);
-            tree.Add(2);
-            tree.Add(4);
-            tree.Add(6);
-            tree.Add(8);
+            tree.Add(44);
+            tree.Add(60);
+            tree.Add(86);
+            tree.Add(93);
+            tree.Add(99);
 
+            Console.WriteLine("Прямой обход дерева:");
+
+            foreach (var item in tree)
+            {
+                Console.Write(item + " ");
+            }
+
+            Console.WriteLine();
+
+            Console.WriteLine("Обратный обход дерева:");
+            TraversalPostOrder(tree.Root);
+
+            Console.WriteLine();
             Console.WriteLine("Центральный обход дерева:");
 
             foreach (var nodeValue in tree.TraverseInOrder(node => node.Left, node => node.Right))
             {
                 Console.Write(nodeValue + " ");
             }
+
             Console.WriteLine();
             Console.ReadKey();
+        }
+
+        static void TraversalPostOrder<T>(BinaryTree<T>.Node node) where T : IComparable
+        {
+            if (node != null)
+            {
+                TraversalPostOrder(node.Right);
+                Console.Write(node.Value + " ");
+                TraversalPostOrder(node.Left);
+            }
         }
     }
 }
