@@ -1,83 +1,151 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace GeneralizationsAndLambdaExspressions
+namespace GeneealizationsAndLambdaExspressions
 {
-    public class BinaryTree<T> : IEnumerable<T> where T : IComparable
+    public class BinaryTree<T> : IEnumerable<T> where T : IComparable<T>
     {
-        public enum Side
+        private class Node
         {
-            Left, Right
-        }
-
-        public class Node
-        {
-            public T Value;
+            public T Data;
             public Node Left;
             public Node Right;
-            public Node Parent;
 
-            public Node(T value)
+            public Node(T data)
             {
-                Value = value;
+                Data = data;
+                Left = null;
+                Right = null;
             }
         }
 
-        public Node Root;
+        private Node _root;
+        private Node _current;
 
-        public Node Add(T value)
+        public BinaryTree()
         {
-            Node newNode = new Node(value);
-            if (Root == null)
-            {
-                Root = newNode;
-            }
-            else
-            {
-                AddRecursively(newNode, Root);
-            }
-            return newNode;
+            _root = null;
+            _current = null;
         }
 
-        private Node AddRecursively(Node newNode, Node currentNode)
+        public void Insert(T data)
         {
-            int compareResult = newNode.Value.CompareTo(currentNode.Value);
+            _root = Insert(_root, data);
+        }
+
+        private Node Insert(Node node, T data)
+        {
+            if (node == null)
+            {
+                return new Node(data);
+            }
+
+            int compareResult = data.CompareTo(node.Data);
 
             if (compareResult < 0)
             {
-                if (currentNode.Left == null)
-                {
-                    currentNode.Left = newNode;
-                    newNode.Parent = currentNode;
-                }
-                else
-                {
-                    return AddRecursively(newNode, currentNode.Left);
-                }
+                node.Left = Insert(node.Left, data);
             }
             else if (compareResult > 0)
             {
-                if (currentNode.Right == null)
-                {
-                    currentNode.Right = newNode;
-                    newNode.Parent = currentNode;
-                }
-                else
-                {
-                    return AddRecursively(newNode, currentNode.Right);
-                }
+                node.Right = Insert(node.Right, data);
             }
             else
             {
                 throw new InvalidOperationException("Узел с таким значением уже существует");
             }
-            return newNode;
+
+            return node;
+        }
+
+        public void Reset()
+        {
+            _current = _root;
+            if (_current == null)
+            {
+                return;
+            }
+            while (_current.Left != null)
+            {
+                _current = _current.Left;
+            }
+        }
+
+        public void Next()
+        {
+            if (_current == null)
+                return;
+            if (_current.Right != null)
+            {
+                _current = _current.Right;
+                while (_current.Left != null)
+                {
+                    _current = _current.Left;
+                }
+            }
+            else
+            {
+                while (_current != null && _current.Right == null)
+                {
+                    _current = _current.Right;
+                }
+                if (_current != null)
+                {
+                    _current = _current.Right;
+                    while (_current.Left != null)
+                    {
+                        _current = _current.Left;
+                    }
+                }
+            }
+        }
+
+        public void Previous()
+        {
+            if (_current == null)
+                return;
+            if (_current.Left != null)
+            {
+                _current = _current.Left;
+                while (_current.Right != null)
+                {
+                    _current = _current.Right;
+                }
+            }
+            else
+            {
+                while (_current != null && _current.Left == null)
+                {
+                    _current = _current.Left;
+                }
+                if (_current != null)
+                {
+                    _current = _current.Left;
+                    while (_current.Right != null)
+                    {
+                        _current = _current.Right;
+                    }
+                }
+            }
+        }
+
+        public T Current()
+        {
+            if (_current != null)
+            {
+                return _current.Data;
+            }
+            else
+            {
+                return default(T);
+            }
         }
 
         public IEnumerator<T> GetEnumerator()
         {
-            return new BinaryTreeEnumerator(Root);
+            return PreOrderTraversal(_root).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -85,129 +153,114 @@ namespace GeneralizationsAndLambdaExspressions
             return GetEnumerator();
         }
 
-        public IEnumerable<T> TraverseInOrder(Func<Node, Node> getLeft, Func<Node, Node> getRight)
+        private IEnumerable<T> PreOrderTraversal(Node node)
         {
-            var stack = new Stack<Node>();
-            var current = Root;
-
-            while (current != null || stack.Count > 0)
+            if (node != null)
             {
-                while (current != null)
+                yield return node.Data;
+                foreach (var leftValue in PreOrderTraversal(node.Left))
                 {
-                    stack.Push(current);
-                    current = getLeft(current);
+                    yield return leftValue;
                 }
-
-                current = stack.Pop();
-                yield return current.Value;
-                current = getRight(current);
+                foreach (var rightValue in PreOrderTraversal(node.Right))
+                {
+                    yield return rightValue;
+                }
             }
         }
 
-        private class BinaryTreeEnumerator : IEnumerator<T>
+        public IEnumerable<T> PostOrderTraversal()
         {
-            private Stack<Node> stack = new Stack<Node>();
-            private Node current;
+            return PostOrderTraversal(_root);
+        }
 
-            public BinaryTreeEnumerator(Node root)
+        private IEnumerable<T> PostOrderTraversal(Node node)
+        {
+            if (node != null)
             {
-                current = root;
-                PushLeftNodes();
-            }
-
-            private void PushLeftNodes()
-            {
-                while (current != null)
+                foreach (var leftValue in PostOrderTraversal(node.Left))
                 {
-                    stack.Push(current);
-                    current = current.Left;
+                    yield return leftValue;
                 }
-            }
-
-            public T Current
-            {
-                get
+                foreach (var rightValue in PostOrderTraversal(node.Right))
                 {
-                    if (stack.Count == 0)
-                        return default;
-                    return stack.Peek().Value;
+                    yield return rightValue;
                 }
+                yield return node.Data;
             }
-            object IEnumerator.Current => Current;
+        }
 
-            public bool MoveNext()
+        public Func<IEnumerator<T>> InOrderTraversal()
+        {
+            return () =>
             {
-                if (stack.Count == 0)
-                    return false;
+                var stack = new Stack<Node>();
+                var current = _root;
 
-                current = stack.Pop();
-                Node node = current.Right;
-                while (node != null)
+                IEnumerable<T> Enumerate()
                 {
-                    stack.Push(node);
-                    node = node.Left;
+                    while (current != null || stack.Count > 0)
+                    {
+                        while (current != null)
+                        {
+                            stack.Push(current);
+                            current = current.Left;
+                        }
+
+                        current = stack.Pop();
+                        yield return current.Data;
+
+                        current = current.Right;
+                    }
                 }
-                return true;
-            }
 
-            public void Reset()
-            {
-                throw new NotImplementedException();
-            }
-
-            public void Dispose() { }
+                return Enumerate().GetEnumerator();
+            };
         }
     }
 
-    class Program
+    class Progaram
     {
         static void Main(string[] args)
         {
-            var tree = new BinaryTree<int>();
+            BinaryTree<int> tree = new BinaryTree<int>();
+            tree.Insert(75);
+            tree.Insert(57);
+            tree.Insert(90);
+            tree.Insert(32);
+            tree.Insert(7);
+            tree.Insert(44);
+            tree.Insert(60);
+            tree.Insert(86);
+            tree.Insert(93);
+            tree.Insert(99);
 
-            tree.Add(75);
-            tree.Add(57);
-            tree.Add(90);
-            tree.Add(32);
-            tree.Add(7);
-            tree.Add(44);
-            tree.Add(60);
-            tree.Add(86);
-            tree.Add(93);
-            tree.Add(99);
-
-            Console.WriteLine("Прямой обход дерева:");
+            Console.WriteLine("Прямой обход дерева (Корень -> Левый потомок -> Правый потомок):");
 
             foreach (var item in tree)
             {
                 Console.Write(item + " ");
             }
 
-            Console.WriteLine();
+            Console.WriteLine("\nОбратный обход дерева (Левый потомок -> Правый потомок -> Корень):");
 
-            Console.WriteLine("Обратный обход дерева:");
-            TraversalPostOrder(tree.Root);
-
-            Console.WriteLine();
-            Console.WriteLine("Центральный обход дерева:");
-
-            foreach (var nodeValue in tree.TraverseInOrder(node => node.Left, node => node.Right))
+            foreach(var item in tree.PostOrderTraversal())
             {
-                Console.Write(nodeValue + " ");
+                Console.Write(item + " ");
+            }
+
+            Func<IEnumerator<int>> iterator = tree.InOrderTraversal();
+            IEnumerator<int> enumerator = iterator();
+
+            Console.WriteLine("\nЦентральный обход дерева (Левый потомок -> Корень -> Правый потомок):");
+
+            while (enumerator.MoveNext())
+            {
+                Console.Write(enumerator.Current + " ");
             }
 
             Console.WriteLine();
             Console.ReadKey();
-        }
-
-        static void TraversalPostOrder<T>(BinaryTree<T>.Node node) where T : IComparable
-        {
-            if (node != null)
-            {
-                TraversalPostOrder(node.Right);
-                Console.Write(node.Value + " ");
-                TraversalPostOrder(node.Left);
-            }
         }
     }
 }
