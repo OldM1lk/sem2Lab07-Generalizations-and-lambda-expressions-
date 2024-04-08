@@ -142,6 +142,50 @@ namespace GeneealizationsAndLambdaExspressions
             }
         }
 
+        private List<Node> _nodes = new List<Node>();
+        private int _index;
+
+        private void PushLeftNodes(Node node)
+        {
+            while (node != null)
+            {
+                _nodes.Add(node);
+                node = node.Left;
+            }
+        }
+
+        public bool MovePrevious()
+        {
+            if (_index == _nodes.Count)
+                return false;
+
+            Node node = _nodes[++_index];
+            PushLeftNodes(node.Left);
+            return true;
+        }
+
+        public bool MoveNext()
+        {
+            if (_index == 0)
+                return false;
+
+            Node node = _nodes[--_index];
+            PushLeftNodes(node.Right);
+            return true;
+        }
+
+        public static BinaryTree<T> operator ++(BinaryTree<T> enumerator)
+        {
+            enumerator.MoveNext();
+            return enumerator;
+        }
+
+        public static BinaryTree<T> operator --(BinaryTree<T> enumerator)
+        {
+            enumerator.MovePrevious();
+            return enumerator;
+        }
+
         public IEnumerator<T> GetEnumerator()
         {
             return PreOrderTraversal(_root).GetEnumerator();
@@ -243,7 +287,7 @@ namespace GeneealizationsAndLambdaExspressions
 
             Console.WriteLine("\nОбратный обход дерева (Левый потомок -> Правый потомок -> Корень):");
 
-            foreach(var item in tree.PostOrderTraversal())
+            foreach (var item in tree.PostOrderTraversal())
             {
                 Console.Write(item + " ");
             }
